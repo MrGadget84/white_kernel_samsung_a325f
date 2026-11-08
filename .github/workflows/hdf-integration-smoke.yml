@@ -10,6 +10,7 @@ on:
       - 'drivers/Kconfig'
       - 'drivers/Makefile'
       - 'arch/arm64/kernel/vmlinux.lds.S'
+      - 'fs/namespace.c'
 
 permissions:
   contents: read
