@@ -54,7 +54,11 @@ jobs:
           test -L drivers/hdf/inner_api
           test -L include/hdf
           test -L bounds_checking_function
-          grep -q 'source "drivers/hdf/khdf/Kconfig"' drivers/Kconfig
+          HC_GEN_DIR="$OHOS_ROOT/drivers/hdf_core/framework/tools/hc-gen"
+          make -C "$HC_GEN_DIR" BUILD_DIR="$HC_GEN_DIR/build/"
+          "$HC_GEN_DIR/build/hc-gen" -b -i -a -o "$OHOS_ROOT/vendor/samsung/a32/hdf_config/khdf/hdf_hcs" "$OHOS_ROOT/vendor/samsung/a32/hdf_config/khdf/hdf.hcs"
+          test -s "$OHOS_ROOT/vendor/samsung/a32/hdf_config/khdf/hdf_hcs_hex.c"
+          make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang CPP='clang -E' LD=ld.lld AR=aarch64-linux-gnu-ar NM=aarch64-linux-gnu-nm OBJCOPY=aarch64-linux-gnu-objcopy OBJDUMP=aarch64-linux-gnu-objdump STRIP=aarch64-linux-gnu-strip HOSTCC=clang OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 drivers/hdf/khdf/
           grep -q 'obj-$(CONFIG_DRIVERS_HDF).*hdf/' drivers/Makefile
           grep -q '_hdf_drivers_start' arch/arm64/kernel/vmlinux.lds.S
 
