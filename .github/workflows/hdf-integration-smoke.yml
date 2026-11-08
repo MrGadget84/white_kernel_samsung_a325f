@@ -27,7 +27,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev libelf-dev python3 build-essential
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev python3 build-essential gcc-aarch64-linux-gnu
 
       - name: Fetch OpenHarmony 6.1 LTS HDF and dependencies
         run: |
@@ -36,7 +36,7 @@ jobs:
 
       - name: Recreate the OpenHarmony source layout expected by KHDF
         run: |
-          OHOS_ROOT="$(realpath drivers/hdf/khdf/../../../../../)"
+          OHOS_ROOT="$(realpath "$PWD/../..")"
           mkdir -p "$OHOS_ROOT/drivers" "$OHOS_ROOT/third_party" "$OHOS_ROOT/vendor/samsung/a32"
           ln -sfn "$(realpath ../drivers_hdf_core)" "$OHOS_ROOT/drivers/hdf_core"
           ln -sfn "$(realpath ../bounds_checking_function)" "$OHOS_ROOT/third_party/bounds_checking_function"
@@ -75,5 +75,5 @@ jobs:
           scripts/config --enable DRIVERS_HDF
           make ARCH=arm64 olddefconfig
           grep -q '^CONFIG_DRIVERS_HDF=y' .config
-          make ARCH=arm64 HOSTCC=gcc CC=gcc -j2 drivers/hdf/khdf/
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTCC=gcc -j2 drivers/hdf/khdf/
           echo "PASS: OpenHarmony 6.1 LTS KHDF core and A32 HCS built successfully."
