@@ -69,7 +69,7 @@ p = Path(sys.argv[1])
 s = p.read_text()
 flag = "ccflags-y += -I$(srctree)/bounds_checking_function/src"
 if flag not in s:
-    s += "\\n" + flag + "\\n"
+    s += chr(10) + flag + chr(10)
 p.write_text(s)
 PY
 
