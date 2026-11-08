@@ -1,0 +1,63 @@
+name: OpenHarmony HDF 6.1 LTS integration smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [OpenHarmony]
+    paths:
+      - 'scripts/openharmony/**'
+      - '.github/workflows/hdf-integration-smoke.yml'
+      - 'drivers/Kconfig'
+      - 'drivers/Makefile'
+      - 'arch/arm64/kernel/vmlinux.lds.S'
+
+permissions:
+  contents: read
+
+jobs:
+  hdf-overlay:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout A32 kernel
+        uses: actions/checkout@v4
+        with:
+          ref: OpenHarmony
+          fetch-depth: 1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev python3
+
+      - name: Fetch OpenHarmony 6.1 LTS HDF and dependencies
+        run: |
+          git clone --depth 1 --branch OpenHarmony-6.1-LTS https://github.com/openharmony/drivers_hdf_core.git ../drivers_hdf_core
+          git clone --depth 1 --branch OpenHarmony-6.1-LTS https://github.com/openharmony/third_party_bounds_checking_function.git ../bounds_checking_function
+
+      - name: Prepare disposable HDF overlay
+        run: |
+          bash scripts/openharmony/prepare-hdf-overlay.sh ../drivers_hdf_core ../bounds_checking_function
+          test -L drivers/hdf/khdf
+          test -L drivers/hdf/framework
+          test -L drivers/hdf/inner_api
+          test -L include/hdf
+          test -L bounds_checking_function
+          grep -q 'source "drivers/hdf/khdf/Kconfig"' drivers/Kconfig
+          grep -q 'obj-$(CONFIG_DRIVERS_HDF).*hdf/' drivers/Makefile
+          grep -q '_hdf_drivers_start' arch/arm64/kernel/vmlinux.lds.S
+
+      - name: Parse A32 defconfig with HDF available
+        run: |
+          make ARCH=arm64 a32_defconfig
+          scripts/kconfig/conf --olddefconfig Kconfig
+          grep -q '^# CONFIG_DRIVERS_HDF is not set' .config
+          grep -q '^CONFIG_MEDIATEK_SOLUTION=y' .config
+          grep -q '^CONFIG_MTK_PLATFORM="mt6768"' .config
+          echo "PASS: HDF 6.1 LTS Kconfig is reachable; A32 vendor platform config is preserved."
+
+      - name: Verify KHDF build prerequisites
+        run: |
+          grep -q 'PRODUCT_PATH is not set' drivers/hdf/khdf/Makefile
+          grep -q 'hdf_config' drivers/hdf/khdf/Makefile
+          grep -q 'bounds_checking_function/include' drivers/hdf/khdf/manager/Makefile
+          echo "PASS: KHDF Makefiles and external dependency layout are present."
