@@ -27,12 +27,24 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev libelf-dev python3
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev python3 build-essential
 
       - name: Fetch OpenHarmony 6.1 LTS HDF and dependencies
         run: |
           git clone --depth 1 --branch OpenHarmony-6.1-LTS https://github.com/openharmony/drivers_hdf_core.git ../drivers_hdf_core
           git clone --depth 1 --branch OpenHarmony-6.1-LTS https://github.com/openharmony/third_party_bounds_checking_function.git ../bounds_checking_function
+
+      - name: Recreate the OpenHarmony source layout expected by KHDF
+        run: |
+          OHOS_ROOT="$(realpath drivers/hdf/khdf/../../../../../)"
+          mkdir -p "$OHOS_ROOT/drivers" "$OHOS_ROOT/third_party" "$OHOS_ROOT/vendor/samsung/a32"
+          ln -sfn "$(realpath ../drivers_hdf_core)" "$OHOS_ROOT/drivers/hdf_core"
+          ln -sfn "$(realpath ../bounds_checking_function)" "$OHOS_ROOT/third_party/bounds_checking_function"
+          cp -a scripts/openharmony/test-product/hdf_config "$OHOS_ROOT/vendor/samsung/a32/"
+          echo "OHOS_ROOT=$OHOS_ROOT" >> "$GITHUB_ENV"
+          echo "PRODUCT_PATH=vendor/samsung/a32" >> "$GITHUB_ENV"
+          test -f "$OHOS_ROOT/vendor/samsung/a32/hdf_config/khdf/hdf.hcs"
+          test -f "$OHOS_ROOT/drivers/hdf_core/framework/tools/hc-gen/Makefile"
 
       - name: Prepare disposable HDF overlay
         run: |
@@ -46,21 +58,22 @@ jobs:
           grep -q 'obj-$(CONFIG_DRIVERS_HDF).*hdf/' drivers/Makefile
           grep -q '_hdf_drivers_start' arch/arm64/kernel/vmlinux.lds.S
 
-      - name: Parse A32 defconfig with HDF available
+      - name: Parse stock A32 defconfig with HDF available
         run: |
           make ARCH=arm64 a32_defconfig
           echo "Relevant generated config:"
           grep -E '^(CONFIG_DRIVERS_HDF=|# CONFIG_DRIVERS_HDF is not set|CONFIG_MEDIATEK_SOLUTION=|CONFIG_MTK_PLATFORM=)' .config || true
-          # HDF must remain disabled in the stock A32 defconfig. Accept either
-          # Kconfig representation of the disabled default, but never y/m.
           ! grep -q '^CONFIG_DRIVERS_HDF=[ym]' .config
           grep -q '^CONFIG_MEDIATEK_SOLUTION=y' .config
           grep -q '^CONFIG_MTK_PLATFORM="mt6768"' .config
-          echo "PASS: HDF 6.1 LTS Kconfig is reachable; HDF stays opt-in and A32 vendor platform config is preserved."
+          echo "PASS: stock A32 config remains unchanged and HDF stays opt-in."
 
-      - name: Verify KHDF build prerequisites
+      - name: Build KHDF with isolated A32 test product config
+        env:
+          PRODUCT_PATH: vendor/samsung/a32
         run: |
-          grep -q 'PRODUCT_PATH is not set' drivers/hdf/khdf/Makefile
-          grep -q 'hdf_config' drivers/hdf/khdf/Makefile
-          grep -q 'bounds_checking_function/include' drivers/hdf/khdf/manager/Makefile
-          echo "PASS: KHDF Makefiles and external dependency layout are present."
+          scripts/config --enable DRIVERS_HDF
+          make ARCH=arm64 olddefconfig
+          grep -q '^CONFIG_DRIVERS_HDF=y' .config
+          make ARCH=arm64 HOSTCC=gcc CC=gcc -j2 drivers/hdf/khdf/
+          echo "PASS: OpenHarmony 6.1 LTS KHDF core and A32 HCS built successfully."
