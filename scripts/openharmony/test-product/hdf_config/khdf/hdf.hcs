@@ -1,0 +1,3 @@
+root {
+    module = "samsung,a32";
+}
