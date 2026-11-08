@@ -35,6 +35,30 @@ link_dir "$HDF_ROOT/interfaces/inner_api" drivers/hdf/inner_api
 link_dir "$HDF_ROOT/framework/include" include/hdf
 link_dir "$BOUNDS_ROOT" bounds_checking_function
 
+# The upstream KHDF manager Makefile lists secure-C objects with absolute
+# source-tree paths. Linux 4.14 Kbuild prepends $(obj) to those paths, producing
+# invalid targets. Stage the same upstream sources locally in manager/src.
+MANAGER_DIR="$HDF_ROOT/adapter/khdf/linux/manager"
+SECUREC_SOURCES=(
+    memcpy_s.c memmove_s.c memset_s.c securecutil.c secureinput_a.c
+    secureprintoutput_a.c snprintf_s.c sprintf_s.c strcat_s.c strcpy_s.c
+    strncat_s.c strncpy_s.c strtok_s.c vsnprintf_s.c vsprintf_s.c
+)
+for source in "${SECUREC_SOURCES[@]}"; do
+    cp "$BOUNDS_ROOT/src/$source" "$MANAGER_DIR/src/securec_$source"
+done
+python3 - "$MANAGER_DIR/Makefile" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+old = "SEC_FUNCTION_OBJECTS := $(addprefix $(OHOS_SOURCE_ROOT)/third_party/bounds_checking_function/src/,${SEC_FUNCTION_OBJECTS})"
+new = "SEC_FUNCTION_OBJECTS := $(addprefix ./src/securec_,${SEC_LIB_SOURCES:.c=.o})"
+if old not in s:
+    raise SystemExit("Could not locate upstream SEC_FUNCTION_OBJECTS absolute-path assignment")
+p.write_text(s.replace(old, new, 1))
+PY
+
 # Wrapper added by the upstream Linux 4.19 integration patch.
 cat > drivers/hdf/Makefile <<'EOF'
 # OpenHarmony HDF adapter wrapper.
