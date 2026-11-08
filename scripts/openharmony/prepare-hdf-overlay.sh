@@ -31,6 +31,12 @@ link_dir "$HDF_ROOT/interfaces/inner_api" drivers/hdf/inner_api
 link_dir "$HDF_ROOT/framework/include" include/hdf
 link_dir "$BOUNDS_ROOT" bounds_checking_function
 
+# Wrapper added by the upstream Linux 4.19 integration patch.
+cat > drivers/hdf/Makefile <<'EOF'
+# OpenHarmony HDF adapter wrapper.
+obj-$(CONFIG_DRIVERS_HDF) += khdf/
+EOF
+
 # Linux 4.14 Samsung tree has different Kconfig/Makefile ordering from 4.19.
 grep -q 'source "drivers/hdf/khdf/Kconfig"' drivers/Kconfig || \
     sed -i '/source "drivers\/switch\/Kconfig"/a source "drivers/hdf/khdf/Kconfig"' drivers/Kconfig
@@ -43,20 +49,24 @@ if ! grep -q '_hdf_drivers_start' arch/arm64/kernel/vmlinux.lds.S; then
 from pathlib import Path
 p = Path("arch/arm64/kernel/vmlinux.lds.S")
 s = p.read_text()
-needle = "\t\tINIT_RAM_FS"
-if s.count(needle) != 1:
-    raise SystemExit("Could not uniquely locate INIT_RAM_FS in arm64 linker script")
-insert = """\t\tINIT_RAM_FS
-#ifdef CONFIG_DRIVERS_HDF
+old = """\t\tINIT_RAM_FS
+\t\t*(.init.rodata.* .init.bss)\t/* from the EFI stub */
 \t}
+\t.exit.data : {"""
+if s.count(old) != 1:
+    raise SystemExit("Could not uniquely locate the end of .init.data")
+new = """\t\tINIT_RAM_FS
+\t\t*(.init.rodata.* .init.bss)\t/* from the EFI stub */
+\t}
+#ifdef CONFIG_DRIVERS_HDF
 \t.init.hdf_table : {
 \t\t_hdf_drivers_start = .;
 \t\t*(.hdf.driver)
 \t\t_hdf_drivers_end = .;
+\t}
 #endif
-"""
-# Preserve the existing remainder of the .init.data section.
-s = s.replace(needle, insert.rstrip("\n"), 1)
+\t.exit.data : {"""
+s = s.replace(old, new, 1)
 p.write_text(s)
 PY
 fi
