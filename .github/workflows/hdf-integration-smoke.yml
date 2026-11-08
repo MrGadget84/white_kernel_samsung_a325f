@@ -78,7 +78,11 @@ jobs:
           echo "Kernel compiler:"
           clang --version | head -n 1
           printf 'int smoke_test(void) { return 0; }\n' | clang --target=aarch64-linux-gnu -fstack-protector-strong -x c -c -o /tmp/a32-ssp-probe.o -
-          scripts/config --enable DRIVERS_HDF --disable CC_STACKPROTECTOR_STRONG --disable CC_STACKPROTECTOR_REGULAR
+          # The vendor defconfig enables IKHEADERS, whose legacy 4.14 helper
+          # expects a kernel-tree-local tools/build/cpio binary. Header archive
+          # generation is unrelated to KHDF compatibility, so omit it only from
+          # this disposable CI build config (never from a32_defconfig).
+          scripts/config --enable DRIVERS_HDF --disable CC_STACKPROTECTOR_STRONG --disable CC_STACKPROTECTOR_REGULAR --disable IKHEADERS
           make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 olddefconfig
           grep -q '^CONFIG_DRIVERS_HDF=y' .config
           ! grep -q '^CONFIG_CC_STACKPROTECTOR_\(STRONG\|REGULAR\)=y' .config
