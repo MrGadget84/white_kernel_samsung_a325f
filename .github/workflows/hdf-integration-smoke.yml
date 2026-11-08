@@ -27,7 +27,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex libssl-dev libelf-dev python3 build-essential gcc-aarch64-linux-gnu clang lld
+          sudo apt-get install -y bc bison flex libssl-dev libelf-dev python3 build-essential gcc-aarch64-linux-gnu clang lld device-tree-compiler
 
       - name: Fetch OpenHarmony 6.1 LTS HDF and dependencies
         run: |
@@ -88,3 +88,11 @@ jobs:
           test -s "$OHOS_ROOT/vendor/samsung/a32/hdf_config/khdf/hdf_hcs_hex.c"
           make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang CPP='clang -E' LD=ld.lld AR=aarch64-linux-gnu-ar NM=aarch64-linux-gnu-nm OBJCOPY=aarch64-linux-gnu-objcopy OBJDUMP=aarch64-linux-gnu-objdump STRIP=aarch64-linux-gnu-strip HOSTCC=clang OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 drivers/hdf/khdf/
           echo "PASS: OpenHarmony 6.1 LTS KHDF core and A32 HCS built successfully."
+
+      - name: Link the complete ARM64 kernel with KHDF enabled
+        env:
+          PRODUCT_PATH: vendor/samsung/a32
+        run: |
+          make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang CPP='clang -E' LD=ld.lld AR=aarch64-linux-gnu-ar NM=aarch64-linux-gnu-nm OBJCOPY=aarch64-linux-gnu-objcopy OBJDUMP=aarch64-linux-gnu-objdump STRIP=aarch64-linux-gnu-strip HOSTCC=clang OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 Image dtbs
+          test -s arch/arm64/boot/Image
+          echo "PASS: complete ARM64 Image and device trees built with KHDF enabled."
