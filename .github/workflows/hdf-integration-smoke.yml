@@ -83,5 +83,5 @@ jobs:
           make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 olddefconfig
           grep -q '^CONFIG_DRIVERS_HDF=y' .config
           ! grep -q '^CONFIG_CC_STACKPROTECTOR_\(STRONG\|REGULAR\)=y' .config
-          make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang LD=ld.lld HOSTCC=clang OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 drivers/hdf/khdf/
+          make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CLANG_TRIPLE=aarch64-linux-gnu- CC=clang CPP='clang -E' LD=ld.lld HOSTCC=clang OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 drivers/hdf/khdf/
           echo "PASS: OpenHarmony 6.1 LTS KHDF core and A32 HCS built successfully."
