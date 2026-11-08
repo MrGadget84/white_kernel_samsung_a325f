@@ -60,7 +60,7 @@ jobs:
 
       - name: Parse stock A32 defconfig with HDF available
         run: |
-          make ARCH=arm64 a32_defconfig
+          make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 a32_defconfig
           echo "Relevant generated config:"
           grep -E '^(CONFIG_DRIVERS_HDF=|# CONFIG_DRIVERS_HDF is not set|CONFIG_MEDIATEK_SOLUTION=|CONFIG_MTK_PLATFORM=)' .config || true
           ! grep -q '^CONFIG_DRIVERS_HDF=[ym]' .config
@@ -73,7 +73,7 @@ jobs:
           PRODUCT_PATH: vendor/samsung/a32
         run: |
           scripts/config --enable DRIVERS_HDF
-          make ARCH=arm64 olddefconfig
+          make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 olddefconfig
           grep -q '^CONFIG_DRIVERS_HDF=y' .config
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTCC=clang HOSTLD=ld.lld OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 drivers/hdf/khdf/
+          make SHELL=/bin/bash CONFIG_SHELL=/bin/bash ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc HOSTCC=clang OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 drivers/hdf/khdf/
           echo "PASS: OpenHarmony 6.1 LTS KHDF core and A32 HCS built successfully."
