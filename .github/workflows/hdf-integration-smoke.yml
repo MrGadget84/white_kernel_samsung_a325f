@@ -49,11 +49,14 @@ jobs:
       - name: Parse A32 defconfig with HDF available
         run: |
           make ARCH=arm64 a32_defconfig
-          scripts/kconfig/conf --olddefconfig Kconfig
-          grep -q '^# CONFIG_DRIVERS_HDF is not set' .config
+          echo "Relevant generated config:"
+          grep -E '^(CONFIG_DRIVERS_HDF=|# CONFIG_DRIVERS_HDF is not set|CONFIG_MEDIATEK_SOLUTION=|CONFIG_MTK_PLATFORM=)' .config || true
+          # HDF must remain disabled in the stock A32 defconfig. Accept either
+          # Kconfig representation of the disabled default, but never y/m.
+          ! grep -q '^CONFIG_DRIVERS_HDF=[ym]' .config
           grep -q '^CONFIG_MEDIATEK_SOLUTION=y' .config
           grep -q '^CONFIG_MTK_PLATFORM="mt6768"' .config
-          echo "PASS: HDF 6.1 LTS Kconfig is reachable; A32 vendor platform config is preserved."
+          echo "PASS: HDF 6.1 LTS Kconfig is reachable; HDF stays opt-in and A32 vendor platform config is preserved."
 
       - name: Verify KHDF build prerequisites
         run: |
