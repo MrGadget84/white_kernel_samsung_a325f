@@ -6,6 +6,10 @@ set -euo pipefail
 KERNEL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 HDF_ROOT="${1:?usage: prepare-hdf-overlay.sh /path/to/drivers_hdf_core}"
 BOUNDS_ROOT="${2:?usage: prepare-hdf-overlay.sh /path/to/bounds_checking_function}"
+# Symlink targets must be absolute: relative arguments resolve from drivers/hdf,
+# not from the repository root where this script is invoked.
+HDF_ROOT="$(cd "$HDF_ROOT" && pwd)"
+BOUNDS_ROOT="$(cd "$BOUNDS_ROOT" && pwd)"
 
 [[ -f "$HDF_ROOT/adapter/khdf/linux/Kconfig" ]]
 [[ -f "$HDF_ROOT/adapter/khdf/linux/Makefile" ]]
