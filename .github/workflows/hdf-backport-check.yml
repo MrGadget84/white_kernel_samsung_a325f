@@ -1,0 +1,79 @@
+name: OpenHarmony HDF backport preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout A32 OpenHarmony kernel
+        uses: actions/checkout@v4
+        with:
+          ref: OpenHarmony
+          fetch-depth: 1
+
+      - name: Record kernel version
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION) =' Makefile
+          grep -q '^VERSION = 4$' Makefile
+          grep -q '^PATCHLEVEL = 14$' Makefile
+          grep -q '^SUBLEVEL = 357$' Makefile
+
+      - name: Fetch OpenHarmony 6.1 LTS sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch OpenHarmony-6.1-LTS \
+            https://github.com/openharmony/drivers_hdf_core.git ../drivers_hdf_core
+          git clone --depth 1 --branch OpenHarmony-6.1-LTS \
+            https://github.com/openharmony/kernel_linux_patches.git ../kernel_linux_patches
+
+      - name: Inspect HDF integration inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          HDF=../drivers_hdf_core
+          PATCH=../kernel_linux_patches/linux-4.19/common_patch/hdf.patch
+
+          test -d "$HDF/adapter/khdf/linux"
+          test -f "$HDF/adapter/khdf/linux/Makefile"
+          test -f "$HDF/adapter/khdf/linux/patch_hdf.sh"
+          test -s "$PATCH"
+
+          echo "=== HDF KHDF Linux adapter files ==="
+          find "$HDF/adapter/khdf/linux" -maxdepth 2 -type f | sort
+          echo "=== Official Linux 4.19 patch summary ==="
+          git -C ../kernel_linux_patches log -1 --oneline
+          git apply --stat "$PATCH"
+
+      - name: Check whether the 4.19 patch applies cleanly to this 4.14 tree
+        shell: bash
+        run: |
+          set -u
+          PATCH=../kernel_linux_patches/linux-4.19/common_patch/hdf.patch
+          if git apply --check "$PATCH"; then
+            echo "RESULT: patch applies cleanly."
+          else
+            echo "::warning::Expected compatibility differences: the official patch targets Linux 4.19, while this device kernel is Linux 4.14. This is an audit result, not a build failure."
+          fi
+
+      - name: Summarize device integration points
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Existing HDF integration references ==="
+          if grep -RInE 'CONFIG_DRIVERS_HDF|drivers/hdf|HdfRegisterHdfInputDev' \
+            drivers/Kconfig drivers/Makefile drivers/hid include/linux/hid.h 2>/dev/null; then
+            true
+          else
+            echo "No HDF kernel integration references found yet."
+          fi
+          echo "=== Device platform config ==="
+          grep -E 'CONFIG_MEDIATEK_SOLUTION|CONFIG_MTK_PLATFORM|CONFIG_ARCH_MEDIATEK' \
+            arch/arm64/configs/a32_defconfig || true
