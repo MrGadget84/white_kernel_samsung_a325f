@@ -75,5 +75,5 @@ jobs:
           scripts/config --enable DRIVERS_HDF
           make ARCH=arm64 olddefconfig
           grep -q '^CONFIG_DRIVERS_HDF=y' .config
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTCC=gcc -j2 drivers/hdf/khdf/
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- HOSTCC=gcc OHOS_SOURCE_ROOT="$OHOS_ROOT" -j2 drivers/hdf/khdf/
           echo "PASS: OpenHarmony 6.1 LTS KHDF core and A32 HCS built successfully."
