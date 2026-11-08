@@ -99,27 +99,6 @@ p.write_text(s)
 PY
 fi
 
-# The upstream KHDF manager Makefile lists secure-C objects with absolute
-# paths. Linux 4.14 Kbuild treats those as targets below manager/ and fails.
-# Expose the required sources locally and use manager-relative object names.
-MANAGER_DIR="drivers/hdf/khdf/manager"
-mkdir -p "$MANAGER_DIR/src"
-python3 - "$MANAGER_DIR/Makefile" <<'PY'
-from pathlib import Path
-import sys
-p = Path(sys.argv[1])
-s = p.read_text()
-old = "SEC_FUNCTION_OBJECTS := $(addprefix $(OHOS_SOURCE_ROOT)/third_party/bounds_checking_function/src/,${SEC_FUNCTION_OBJECTS})"
-new = "SEC_FUNCTION_OBJECTS := $(patsubst %.c,./src/%.o,$(SEC_LIB_SOURCES))"
-if old not in s:
-    raise SystemExit("Could not patch KHDF secure-C object paths")
-p.write_text(s.replace(old, new, 1))
-PY
-for source in "$BOUNDS_ROOT"/src/*.c; do
-    name="$(basename "$source")"
-    ln -s "$source" "$MANAGER_DIR/src/$name"
-done
-
 echo "HDF overlay prepared:"
 printf '  KHDF: %s\n' "$(readlink drivers/hdf/khdf)"
 printf '  framework: %s\n' "$(readlink drivers/hdf/framework)"
