@@ -59,6 +59,20 @@ if old not in s:
 p.write_text(s.replace(old, new, 1))
 PY
 
+# securecutil.h lives in bounds_checking_function/src; the upstream manager
+# Makefile only adds the public include/ directory. Add the private source
+# include path for the staged secure-C objects in this disposable overlay.
+python3 - "$MANAGER_DIR/Makefile" <<'PY'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+flag = "ccflags-y += -I$(srctree)/bounds_checking_function/src"
+if flag not in s:
+    s += "\\n" + flag + "\\n"
+p.write_text(s)
+PY
+
 # Wrapper added by the upstream Linux 4.19 integration patch.
 cat > drivers/hdf/Makefile <<'EOF'
 # OpenHarmony HDF adapter wrapper.
